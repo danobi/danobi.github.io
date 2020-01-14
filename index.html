@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>bpftrace</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+  <link rel="stylesheet" href="css/theme.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">bpftrace</h1>
+</header>
+<p>High-level tracing language for Linux systems</p>
+<p><img align="center" src="images/pony.png" alt="bpftrace pony" width="200"/></p>
+<p><a href="https://github.com/iovisor/bpftrace/blob/master/docs/reference_guide.md">Reference guide</a></p>
+<p><a href="https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md">Tutorial</a></p>
+<p><a href="https://github.com/iovisor/bpftrace/issues">Bug tracker</a></p>
+<p><a href="http://irc.lc/oftc/bpftrace/web@@@">IRC</a></p>
+<p><a href="https://github.com/iovisor/bpftrace/">Github</a></p>
+<h3 id="example">Example</h3>
+<p>Produce a histogram of time (in nanoseconds) spent in <code>read(2)</code>:</p>
+<pre><code> // read.bt file
+ tracepoint:syscalls:sys_enter_read
+ {
+   @start[tid] = nsecs;
+ }
+ 
+ tracepoint:syscalls:sys_exit_read / @start[tid] /
+ {
+   @times = hist(nsecs - @start[tid]);
+   delete(@start[tid]);
+ }
+ 
+ # bpftrace read.bt
+ Attaching 2 probes...
+ ^C
+ 
+ @times:
+ [256, 512)           326 |@                                                   |
+ [512, 1k)           7715 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+ [1k, 2k)           15306 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+ [2k, 4k)             609 |@@                                                  |
+ [4k, 8k)             611 |@@                                                  |
+ [8k, 16k)            438 |@                                                   |
+ [16k, 32k)            59 |                                                    |
+ [32k, 64k)            36 |                                                    |
+ [64k, 128k)            5 |                                                    |</code></pre>
+</body>
+</html>
