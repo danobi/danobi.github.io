@@ -8,7 +8,7 @@ High-level tracing language for Linux systems
 
 [Tutorial](https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md)
 
-[Community forum](https://bpftrace.discourse.group/)
+[Community forum](https://github.com/iovisor/bpftrace/discussions)
 
 [Bug tracker](https://github.com/iovisor/bpftrace/issues)
 
