@@ -2,8 +2,6 @@
 
 High-level tracing language for Linux systems
 
-<img align="center" src="images/pony.png" alt="bpftrace pony" width="200"/>
-
 [Reference guide](https://github.com/iovisor/bpftrace/blob/master/docs/reference_guide.md)
 
 [Tutorial](https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md)
