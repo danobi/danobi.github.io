@@ -2,7 +2,7 @@
 
 High-level tracing language for Linux systems
 
-[Reference guide](https://github.com/iovisor/bpftrace/blob/master/docs/reference_guide.md)
+[Documentation](./docs/v0.21.x.html)
 
 [Tutorial](https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md)
 
