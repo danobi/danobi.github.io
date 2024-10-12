@@ -4,15 +4,15 @@ High-level tracing language for Linux systems
 
 [Documentation](./docs/v0.21.x.html)
 
-[Tutorial](https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md)
+[Tutorial](https://github.com/bpftrace/bpftrace/blob/master/docs/tutorial_one_liners.md)
 
-[Community forum](https://github.com/iovisor/bpftrace/discussions)
+[Community forum](https://github.com/bpftrace/bpftrace/discussions)
 
-[Bug tracker](https://github.com/iovisor/bpftrace/issues)
+[Bug tracker](https://github.com/bpftrace/bpftrace/issues)
 
 [IRC](http://irc.lc/oftc/bpftrace/web@@@)
 
-[Github](https://github.com/iovisor/bpftrace/)
+[Github](https://github.com/bpftrace/bpftrace/)
 
 ### Example
 
