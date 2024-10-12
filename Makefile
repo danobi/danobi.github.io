@@ -1,5 +1,5 @@
 SOURCE_DOCS := $(wildcard src/*.md)
-SOURCE_ADOCS := $(wildcard src/*.adoc)
+SOURCE_ADOCS := $(wildcard src/docs/*.adoc)
 
 EXPORTED_DOCS = $(notdir $(SOURCE_DOCS:.md=.html))
 EXPORTED_ADOCS = $(addprefix docs/,$(notdir $(SOURCE_ADOCS:.adoc=.html)))
@@ -18,5 +18,5 @@ all: $(EXPORTED_DOCS) $(EXPORTED_ADOCS)
 %.html : src/%.md Makefile css/theme.css
 	$(PANDOC) $(PANDOC_OPTIONS) $(PANDOC_HTML_OPTIONS) $< -o $@
 
-docs/%.html: src/%.adoc | docs
+docs/%.html: src/docs/%.adoc | docs
 	$(ASCIIDOCTOR) $< -o $@
