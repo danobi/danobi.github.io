@@ -4,8 +4,6 @@ SOURCE_ADOCS := $(wildcard src/*.adoc)
 EXPORTED_DOCS = $(notdir $(SOURCE_DOCS:.md=.html))
 EXPORTED_ADOCS = $(addprefix docs/,$(notdir $(SOURCE_ADOCS:.adoc=.html)))
 
-$(info $(EXPORTED_ADOCS))
-
 PANDOC_VERSION := 3.5.0
 PANDOC := podman run --rm -v $(shell pwd):/data --userns=keep-id pandoc/core:$(PANDOC_VERSION)
 PANDOC_OPTIONS = -t markdown-smart --standalone
@@ -19,9 +17,6 @@ all: $(EXPORTED_DOCS) $(EXPORTED_ADOCS)
 
 %.html : src/%.md Makefile css/theme.css
 	$(PANDOC) $(PANDOC_OPTIONS) $(PANDOC_HTML_OPTIONS) $< -o $@
-
-docs:
-	mkdir docs
 
 docs/%.html: src/%.adoc | docs
 	$(ASCIIDOCTOR) $< -o $@
