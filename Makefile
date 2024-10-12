@@ -18,5 +18,5 @@ all: $(EXPORTED_DOCS) $(EXPORTED_ADOCS)
 %.html : src/%.md Makefile css/theme.css
 	$(PANDOC) $(PANDOC_OPTIONS) $(PANDOC_HTML_OPTIONS) $< -o $@
 
-docs/%.html: src/docs/%.adoc | docs
-	$(ASCIIDOCTOR) $< -o $@
+docs/%.html: src/docs/%.adoc src/header.html src/footer.html | docs
+	$(ASCIIDOCTOR) --no-header-footer $< -o - | cat src/header.html - src/footer.html > $@
