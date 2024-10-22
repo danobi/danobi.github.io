@@ -68,8 +68,11 @@ When the child terminates bpftrace will also terminate, as if 'exit()' had been 
 If bpftrace terminates before the child process does the child process will be terminated with a SIGTERM.
 If used, 'USDT' probes will only be attached to the child process.
 To avoid a race condition when using 'USDTs', the child is stopped after 'execve' using 'ptrace(2)' and continued when all 'USDT' probes are attached.
-The child PID is available to programs as the 'cpid' builtin.
 The child process runs with the same privileges as bpftrace itself (usually root).
+
+Unless otherwise specified, bpftrace does not perform any implicit filtering. Therefore, if you are only interested in
+events in _COMMAND_, you may want to filter based on the child PID. The child PID is available to programs as the 'cpid' builtin.
+For example, you could add the predicate `/pid == cpid/` to probes with userspace context.
 
 === *-d STAGE*
 
@@ -434,9 +437,10 @@ inside a script config block.
 
 === Data Types
 
-The following fundamental integer types are provided by the language.
-Integers are internally represented as 64 bit signed.
-If you need another representation, you may cast to the following built in types:
+The following fundamental types are provided by the language.
+Note: Integers are by default represented as 64 bit signed but that can be
+changed by either casting them or, for scratch variables, explicitly specifying
+the type upon declaration.
 
 [cols="~,~"]
 |===
@@ -675,7 +679,15 @@ The following operators are available for integer arithmetic:
 
 |===
 
-// TODO: Words about integer conversion when types mismatch
+Operations between a signed and an unsigned integer are allowed providing
+bpftrace can statically prove a safe conversion is possible. If safe conversion
+is not guaranteed, the operation is undefined behavior and a corresponding
+warning will be emitted.
+
+If the two operands are different size, the smaller integer is implicitly
+promoted to the size of the larger one. Sign is preserved in the promotion.
+For example, `(uint32)5 + (uint8)3` is converted to `(uint32)5 + (uint32)3`
+which results in `(uint32)8`.
 
 ==== Logical Operators
 
@@ -798,9 +810,9 @@ All these operators are syntactic sugar for combining assignment with the specif
 
 ==== Increment and Decrement Operators
 
-The increment (`\++`) and decrement (`--`) operators can be used on integer and pointer variables to increment their value by one.
+The increment (`{plus}{plus}`) and decrement (`--`) operators can be used on integer and pointer variables to increment their value by one.
 They can only be used on variables and can either be applied as prefix or suffix.
-The difference is that the expression `x++` returns the original value of `x`, before it got incremented while `++x` returns the value of `x` post increment.
+The difference is that the expression `x{plus}{plus}` returns the original value of `x`, before it got incremented while `{plus}{plus}x` returns the value of `x` post increment.
 
 ----
 $x = 10;
@@ -812,7 +824,7 @@ $b = --$a; // a = 9; b = 9
 Note that maps will be implicitly declared and initialized to 0 if not already declared or defined.
 Scratch variables must be initialized before using these operators.
 
-Note `++`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
+Note `{plus}{plus}`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
 
 === Pointers
 
@@ -931,6 +943,21 @@ bpftrace knows two types of variables, 'scratch' and 'map'.
 
 'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of the program.
 Scratch variable names always start with a `$`, e.g. `$myvar`.
+
+'scratch' variables can also declared before or during initialization with `let` e.g.
+```
+let $x;
+let $y = 11;
+```
+
+If no assignment is specified variables will initialize to 0.
+
+You can also specify the type in the declaration e.g.
+```
+let $x: uint8;
+let $y: uint8 = 7;
+let $a: string = "hiya";
+```
 
 'map' variables use BPF 'maps'.
 These exist for the lifetime of `bpftrace` itself and can be accessed from all action blocks and user-space.
@@ -2476,14 +2503,27 @@ interval:s:10 {
 
 Count how often this function is called.
 
-Using `@=count()` is conceptually similar to `@++`.
+Using `@=count()` is conceptually similar to `@{plus}{plus}`.
 The difference is that the `count()` function uses a map type optimized for
-writing (PER_CPU), increasing performance and correctness. However, sync reads
+performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
-Note: In contrast to hash maps (e.g. `@++`), multiple writers to a shared
-global var might lose counts as bpftrace doesn't update them atomically.
 
+Note: This differs from "raw" writes (e.g. `@{plus}{plus}`) where multiple writers to a
+shared location might lose updates, as bpftrace does not generate any implicit
+atomic operations.
+
+Example one:
+----
+BEGIN {
+  @ = count();
+  @ = count();
+  printf("%d\n", (int64)@);   // prints 2
+  exit();
+}
+----
+
+Example two:
 ----
 interval:ms:100 {
   @ = count();
@@ -2505,7 +2545,7 @@ interval:s:10 {
 
 .variants
 * `delete(map m, mapkey k)`
-* deprecated `delete(mapkey k, ...)`
+* deprecated `delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
@@ -2553,7 +2593,7 @@ kprobe:dummy {
   if (has_key(@scalar)) { // error
     print(("hello"));
   }
-  
+
   $a = has_key(@associative, (1,2)); // ok
   @b[has_key(@associative, (1,2))] = has_key(@associative, (1,2)); // ok
 }
@@ -2642,7 +2682,28 @@ Prints:
 * `max(int64 n)`
 
 Update the map with `n` if `n` is bigger than the current value held.
-Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
+Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+
+Note: this is different than the typical userspace `max()` in that bpftrace's `max()`
+only takes a single argument. The logical "other" argument to compare to is the value
+in the map the "result" is being assigned to.
+
+For example, compare the two logically equivalent samples (C++ vs bpftrace):
+
+In C++:
+----
+int x = std::max(3, 33);  // x contains 33
+----
+
+In bpftrace:
+----
+@x = max(3);
+@x = max(33);   // @x contains 33
+----
+
+Also note that bpftrace takes care to handle the unset case. In other words,
+there is no default value. The first value you pass to `max()` will always
+be returned.
 
 [#map-functions-min]
 === min
@@ -2651,7 +2712,9 @@ Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
 * `min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
-Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
+Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+
+See `max()` above for how this differs from the typical userspace `min()`.
 
 [#map-functions-stats]
 === stats
@@ -2684,12 +2747,26 @@ Calculate the sum of all `n` passed.
 
 Using `@=sum(5)` is conceptually similar to `@+=5`.
 The difference is that the `sum()` function uses a map type optimized for
-writing (PER_CPU), increasing performance and correctness. However, sync reads
+performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
-Note: In contrast to hash maps (e.g. `@+=5`), multiple writers to a shared
-global var might lose updates as bpftrace doesn't update them atomically.
 
+Note: This differs from "raw" writes (e.g. `@+=5`) where multiple writers to a
+shared location might lose updates, as bpftrace does not generate any implicit
+atomic operations.
+
+Example one:
+----
+BEGIN {
+  @ = sum(5);
+  @ = sum(6);
+  printf("%d\n", (int64)@);   // prints 11
+  clear(@);
+  exit();
+}
+----
+
+Example two:
 ----
 interval:ms:100 {
   @ = sum(5);
@@ -3548,6 +3625,14 @@ The possible options are:
 - `warn` - print a warning but continue execution
 - `ignore` - silently ignore missing probes
 
+=== on_stack_limit
+
+Default: 32
+
+The maximum size (in bytes) of individual objects that will be stored on the BPF stack. If they are larger than this limit they will be stored in pre-allocated memory.
+
+This exists because the BPF stack is limited to 512 bytes and large objects make it more likely that we'll run out of space. bpftrace can store objects that are larger than the `on_stack_limit` in pre-allocated memory to prevent this stack error. However, storing in pre-allocated memory may be less memory efficient. Lower this default number if you are still seeing a stack memory error or increase it if you're worried about memory consumption.
+
 === perf_rb_pages
 
 Default: 64
@@ -3623,7 +3708,8 @@ See src/attached_probe.cpp:find_vmlinux() for details.
 The `-d STAGE` option produces debug output. It prints the output of the
 bpftrace execution stage given by the _STAGE_ argument. The option can be used
 multiple times (with different stage names) and the special value `all` prints
-the output of all the supported stages.
+the output of all the supported stages. The option also takes multiple stages
+in one invocation as comma separated values.
 
 Note: This is primarily used for bpftrace developers.
 
@@ -3981,3 +4067,24 @@ ExecStart=bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
 
 Similarly to the systemd-run example, the service to be traced will not start
 until bpftrace started by the systemd unit has attached its probes.
+
+=== PER_CPU types
+
+For bpftrace PER_CPU types (search this document for "PER_CPU"), you may coerce
+(and thus force a more expensive synchronous read) the type to an integer using
+a cast or by doing a comparison. This is useful for when you need an integer
+during comparisons, `printf()`, or other.
+
+For example:
+
+----
+BEGIN {
+  @c = count();
+  @s = sum(3);
+  @s = sum(9);
+
+  if (@s == 12) {                             // Coerces @s
+    printf("%d %d\n", (int64)@c, (int64)@s);  // Coerces @c and @s and prints "1 12"
+  }
+}
+----
