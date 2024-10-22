@@ -22,10 +22,14 @@ jobs:
       - name: Download upstream doc
         run: curl -o src/docs/master.adoc https://raw.githubusercontent.com/bpftrace/bpftrace/master/man/adoc/bpftrace.adoc
 
-      - name: Check for changes
+      - name: Check for source changes
         id: diff
         run: |
           git diff --exit-code src/docs/master.adoc || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Build HTML
+        if: steps.diff.outputs.changed == 'true'
+        run: make docs/master.html
 
       - name: Create Pull Request
         if: steps.diff.outputs.changed == 'true'
