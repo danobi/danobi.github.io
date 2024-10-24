@@ -1346,7 +1346,7 @@ Array casting allows seamless comparison of such representations:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>kfunc:tcp_connect {
+<pre>fentry:tcp_connect {
     if (args-&gt;sk-&gt;__sk_common.skc_daddr == (uint32)pton("127.0.0.1"))
         ...
 }</pre>
@@ -1532,7 +1532,7 @@ For string arguments use the <code>str()</code> call to retrieve the value.</p><
 <td class="tableblock halign-left valign-top"><p class="tableblock">struct args</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">n/a</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">n/a</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The struct of all arguments of the traced function. Available in <code>tracepoint</code>, <code>kfunc</code>, and <code>uprobe</code> (with DWARF) probes. Use <code>args.x</code> to access argument <code>x</code> or <code>args</code> to get a record with all arguments.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The struct of all arguments of the traced function. Available in <code>tracepoint</code>, <code>fentry</code>, <code>fexit</code>, and <code>uprobe</code> (with DWARF) probes. Use <code>args.x</code> to access argument <code>x</code> or <code>args</code> to get a record with all arguments.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">cgroup</p></td>
@@ -1637,7 +1637,7 @@ For string arguments use the <code>str()</code> call to retrieve the value.</p><
 <td class="tableblock halign-left valign-top"><p class="tableblock">int64</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">n/a</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">n/a</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Value returned by the function being traced (kretprobe, uretprobe, kretfunc)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Value returned by the function being traced (kretprobe, uretprobe, fexit)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">tid</p></td>
@@ -2881,11 +2881,11 @@ The <code>data</code> section in the struct <code>skb</code> may contain etherne
 <div class="listingblock">
 <div class="content">
 <pre># cat dump.bt
-kfunc:napi_gro_receive {
+fentry:napi_gro_receive {
   $ret = skboutput("receive.pcap", args.skb, args.skb-&gt;len, 0);
 }
 
-kfunc:dev_queue_xmit {
+fentry:dev_queue_xmit {
   // setting offset to 14, to exclude ethernet header
   $ret = skboutput("output.pcap", args.skb, args.skb-&gt;len, 14);
   printf("skboutput returns %d\n", $ret);
@@ -3985,7 +3985,7 @@ Multiple probes can be specified as a comma (<code>,</code>) separated list:</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Kernel</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#probes-kfunc"><code>kfunc/kretfunc</code></a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#probes-fentry"><code>fentry/fexit</code></a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>f</code>/<code>fr</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Kernel functions tracing with BTF support</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Kernel</p></td>
@@ -4295,18 +4295,12 @@ It can be specified as an absolute or relative path to /sys/fs/bpf.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="probes-kfunc">kfunc and kretfunc</h3>
+<h3 id="probes-fentry">fentry and fexit</h3>
 <div class="ulist">
 <div class="title">variants</div>
 <ul>
 <li>
-<p><code>kfunc[:module]:fn</code></p>
-</li>
-<li>
 <p><code>fentry[:module]:fn</code></p>
-</li>
-<li>
-<p><code>kretfunc[:module]:fn</code></p>
 </li>
 <li>
 <p><code>fexit[:module]:fn</code></p>
@@ -4317,10 +4311,10 @@ It can be specified as an absolute or relative path to /sys/fs/bpf.</p>
 <div class="title">short names</div>
 <ul>
 <li>
-<p><code>f</code> (<code>kfunc</code> or <code>fentry</code>)</p>
+<p><code>f</code> (<code>fentry</code>)</p>
 </li>
 <li>
-<p><code>fr</code> (<code>kretfunc</code> or <code>fexit</code>)</p>
+<p><code>fr</code> (<code>fexit</code>)</p>
 </li>
 </ul>
 </div>
@@ -4331,33 +4325,35 @@ It can be specified as an absolute or relative path to /sys/fs/bpf.</p>
 <p>Kernel features:BTF</p>
 </li>
 <li>
-<p>Probe types:kfunc</p>
+<p>Probe types:fentry</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p><code>kfunc</code>s attach to kernel functions similar to <a href="#probes-kprobe">kprobe and kretprobe</a>.
+<p><code>fentry</code>/<code>fexit</code> probes attach to kernel functions similar to <a href="#probes-kprobe">kprobe and kretprobe</a>.
 They make use of eBPF trampolines which allow kernel code to call into BPF programs with near zero overhead.
-<code>kfunc</code> and <code>kretfunc</code> are aliased as <code>fentry</code> and <code>fexit</code> to match how these are referenced in the kernel.</p>
+Originally, these were called <code>kfunc</code> and <code>kretfunc</code> but were later renamed to <code>fentry</code> and <code>fexit</code> to match
+how these are referenced in the kernel and to prevent confusion with <a href="https://docs.kernel.org/bpf/kfuncs.html">BPF Kernel Functions</a>.
+The original names are still supported for backwards compatibility.</p>
 </div>
 <div class="paragraph">
-<p><code>kfunc</code>s make use of BTF type information to derive the type of function arguments at compile time.
+<p><code>fentry</code>/<code>fexit</code> probes make use of BTF type information to derive the type of function arguments at compile time.
 This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
 The function arguments are available in the <code>args</code> struct which can be inspected by doing verbose listing (see <a href="#_listing_probes">Listing Probes</a>).
-These arguments are also available in the return probe (<code>kretfunc</code>), unlike <code>kretprobe</code>.</p>
+These arguments are also available in the return probe (<code>fexit</code>), unlike <code>kretprobe</code>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre># bpftrace -lv 'kfunc:tcp_reset'
+<pre># bpftrace -lv 'fentry:tcp_reset'
 
-kfunc:tcp_reset
+fentry:tcp_reset
     struct sock * sk
     struct sk_buff * skb</pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>kfunc:x86_pmu_stop {
+<pre>fentry:x86_pmu_stop {
   printf("pmu %s stop\n", str(args.event-&gt;pmu-&gt;name));
 }</pre>
 </div>
@@ -4367,7 +4363,7 @@ kfunc:tcp_reset
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>kretfunc:fget {
+<pre>fexit:fget {
   printf("fd %d name %s\n", args.fd, str(retval-&gt;f_path.dentry-&gt;d_name.name));
 }
 
@@ -5338,8 +5334,8 @@ combined with <code>-e</code> or filename args to see all the probes that a prog
 </div>
 <div class="listingblock">
 <div class="content">
-<pre># bpftrace -l 'kretfunc:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
-kretfunc:tcp_reset
+<pre># bpftrace -l 'fexit:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
+fexit:tcp_reset
     struct sock * sk
     struct sk_buff * skb
 tracepoint:syscalls:sys_enter_openat
