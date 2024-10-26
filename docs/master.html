@@ -1360,16 +1360,32 @@ Array casting allows seamless comparison of such representations:</p>
 <p>bpftrace knows two types of variables, 'scratch' and 'map'.</p>
 </div>
 <div class="paragraph">
-<p>'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of the program.
-Scratch variable names always start with a <code>$</code>, e.g. <code>$myvar</code>.</p>
+<p>'scratch' variables are kept on the BPF stack and their names always start
+with a <code>$</code>, e.g. <code>$myvar</code>.
+'scratch' variables cannot be accessed outside of their lexical block e.g.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>$a = 1;
+if ($a == 1) {
+  $b = "hello"
+  $a = 2;
+}
+// $b is not accessible here</code></pre>
+</div>
 </div>
 <div class="paragraph">
 <p>'scratch' variables can also declared before or during initialization with <code>let</code> e.g.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code>let $x;
-let $y = 11;</code></pre>
+<pre class="highlight"><code>let $a = 1;
+let $b;
+if ($a == 1) {
+  $b = "hello"
+  $a = 2;
+}
+// $b IS accessible here and would be an empty string if the condition wasn't true</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2718,7 +2734,29 @@ The non-standard ones can be found in the table below:</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p>Supported escape sequences</p>
+<p><code>printf()</code> can also symbolize enums as strings. User defined enums as well as enums
+defined in the kernel are supported. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>enum custom {
+  CUSTOM_ENUM = 3,
+};
+
+BEGIN {
+  $r = SKB_DROP_REASON_SOCKET_FILTER;
+  printf("%d, %s, %s\n", $r, $r, CUSTOM_ENUM);
+  exit();
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>yields:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM</pre>
+</div>
 </div>
 <div class="paragraph">
 <p>Colors are supported too, using standard terminal escape sequences:</p>
@@ -3518,8 +3556,8 @@ sum these values.</p>
 </div>
 <div class="paragraph">
 <p>Note: This differs from "raw" writes (e.g. <code>@&#43;&#43;</code>) where multiple writers to a
-shared location might lose updates, as bpftrace does not generate any implicit
-atomic operations.</p>
+shared location might lose updates, as bpftrace does not generate any atomic instructions
+for <code>&#43;&#43;</code>.</p>
 </div>
 <div class="paragraph">
 <p>Example one:</p>
