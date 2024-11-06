@@ -5271,6 +5271,32 @@ Set to empty string to disable truncation trailers.</p>
 <p>Controls whether maps are printed on exit. Set to <code>0</code> in order to change the default behavior and not automatically print maps at program exit.</p>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_symbol_source">symbol_source</h3>
+<div class="paragraph">
+<p>Default: <code>dwarf</code> if <code>bpftrace</code> is compiled with LLDB, <code>symbol_table</code> otherwise</p>
+</div>
+<div class="paragraph">
+<p>Choose how bpftrace will resolve all <code>uprobe</code> symbol locations.</p>
+</div>
+<div class="paragraph">
+<p>Available options:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>dwarf</code> - locate uprobes using DebugInfo, which yields more accurate stack traces (<code>ustack</code>). Fall back to the Symbol Table if it can&#8217;t locate the probe using DebugInfo.</p>
+</li>
+<li>
+<p><code>symbol_table</code> - don&#8217;t use DebugInfo and rely on the ELF Symbol Table instead.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>If the DebugInfo was rewritten by a post-linkage optimisation tool (like BOLT or AutoFDO), it might yield an incorrect address for a probe location.
+This config can force using the Symbol Table, for when the DebugInfo returns invalid addresses.</p>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
