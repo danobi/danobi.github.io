@@ -1490,6 +1490,26 @@ kretprobe:do_nanosleep /has_key(@start, tid)/ {
  */</pre>
 </div>
 </div>
+<div class="paragraph">
+<p>This style of map may also be useful for capturing output parameters, or other context, between two different probes. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>tracepoint:syscalls:sys_enter_wait4
+{
+  @out[tid] = args.ru;
+}
+
+tracepoint:syscalls:sys_exit_wait4
+{
+  $ru = @out[tid];
+  delete(@out, tid);
+  if ($ru != 0) {
+    printf("got usage ...", ...);
+  }
+}</pre>
+</div>
+</div>
 </div>
 </div>
 </div>
