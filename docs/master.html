@@ -1894,6 +1894,11 @@ Tracing block I/O sizes &gt; 0 bytes
 <td class="tableblock halign-left valign-top"><p class="tableblock">Sync</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#functions-percpu-kaddr"><code>percpu_kaddr(const string name [, int cpu])</code></a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Resolve percpu kernel symbol name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Sync</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><a href="#functions-print"><code>print(&#8230;&#8203;)</code></a></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Print a non-map value with default formatting</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Async</p></td>
@@ -2567,6 +2572,51 @@ the path will be clamped by <code>size</code> otherwise <code>BPFTRACE_MAX_STRLE
 </div>
 <div class="paragraph">
 <p>This function can only be used by functions that are allowed to, these functions are contained in the <code>btf_allowlist_d_path</code> set in the kernel.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="functions-percpu-kaddr">percpu_kaddr</h3>
+<div class="ulist">
+<div class="title">variants</div>
+<ul>
+<li>
+<p><code>void *percpu_kaddr(const string name)</code></p>
+</li>
+<li>
+<p><code>void *percpu_kaddr(const string name, int cpu)</code></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>sync</strong></p>
+</div>
+<div class="paragraph">
+<p>Get the address of the percpu kernel symbol <code>name</code> for CPU <code>cpu</code>. When <code>cpu</code> is
+omitted, the current CPU is used.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>interval:s:1 {
+  $proc_cnt = percpu_kaddr("process_counts");
+  printf("% processes are running on CPU %d\n", *$proc_cnt, cpu);
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The second variant may return NULL if <code>cpu</code> is higher than the number of
+available CPUs. Therefore, it is necessary to perform a NULL-check on the result
+when accessing fields of the pointed structure, otherwise the BPF program will
+be rejected.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>interval:s:1 {
+  $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
+  if ($runqueues != 0) {         // The check is mandatory here
+    print($runqueues-&gt;nr_running);
+  }
+}</pre>
+</div>
 </div>
 </div>
 <div class="sect2">
