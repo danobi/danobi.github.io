@@ -5857,10 +5857,10 @@ Operations that happen in the kernel are 'synchronous' ('sync') and those that a
 <h3 id="_map_printing">Map Printing</h3>
 <div class="paragraph">
 <p>By default when a bpftrace program exits it will print all maps to stdout.
-If you don&#8217;t want this, you can either override the <code>print_maps_on_exit</code> configuration option or you can specify an <code>END</code> probe and <code>clear</code> the maps you don&#8217;t want printed (this second method doesn&#8217;t work for scalar maps).</p>
+If you don&#8217;t want this, you can either override the <code>print_maps_on_exit</code> configuration option or you can specify an <code>END</code> probe and <code>clear</code> the maps you don&#8217;t want printed.</p>
 </div>
 <div class="paragraph">
-<p>For example, this script:</p>
+<p>For example, these two scripts are equivalent and will print nothing on exit:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -5874,9 +5874,6 @@ BEGIN {
 }</code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>would print nothing on exit, while this script:</p>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code>BEGIN {
@@ -5888,14 +5885,6 @@ END {
   clear(@a);
   clear(@b);
 }</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>will print this on exit:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code>@a: 0</code></pre>
 </div>
 </div>
 </div>
