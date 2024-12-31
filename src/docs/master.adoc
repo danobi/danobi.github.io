@@ -689,6 +689,11 @@ promoted to the size of the larger one. Sign is preserved in the promotion.
 For example, `(uint32)5 + (uint8)3` is converted to `(uint32)5 + (uint32)3`
 which results in `(uint32)8`.
 
+Pointers may be used with arithmetic operators but only for addition and
+subtraction. For subtraction, the pointer must appear on the left side of the
+operator. Pointers may also be used with logical operators; they are considered
+true when non-null.
+
 ==== Logical Operators
 
 [cols="~,~"]
@@ -1847,6 +1852,8 @@ Error attaching probe: 'kprobe:vfs_read'
 
 Return full path referenced by struct path pointer in argument. If `size` is set,
 the path will be clamped by `size` otherwise `BPFTRACE_MAX_STRLEN` is used.
+
+If `size` is smaller than the resolved path, the resulting string will be truncated at the front rather than at the end.
 
 This function can only be used by functions that are allowed to, these functions are contained in the `btf_allowlist_d_path` set in the kernel.
 

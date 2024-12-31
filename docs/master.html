@@ -1021,6 +1021,12 @@ promoted to the size of the larger one. Sign is preserved in the promotion.
 For example, <code>(uint32)5 + (uint8)3</code> is converted to <code>(uint32)5 + (uint32)3</code>
 which results in <code>(uint32)8</code>.</p>
 </div>
+<div class="paragraph">
+<p>Pointers may be used with arithmetic operators but only for addition and
+subtraction. For subtraction, the pointer must appear on the left side of the
+operator. Pointers may also be used with logical operators; they are considered
+true when non-null.</p>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_logical_operators">Logical Operators</h4>
@@ -2569,6 +2575,9 @@ Error attaching probe: 'kprobe:vfs_read'</pre>
 <div class="paragraph">
 <p>Return full path referenced by struct path pointer in argument. If <code>size</code> is set,
 the path will be clamped by <code>size</code> otherwise <code>BPFTRACE_MAX_STRLEN</code> is used.</p>
+</div>
+<div class="paragraph">
+<p>If <code>size</code> is smaller than the resolved path, the resulting string will be truncated at the front rather than at the end.</p>
 </div>
 <div class="paragraph">
 <p>This function can only be used by functions that are allowed to, these functions are contained in the <code>btf_allowlist_d_path</code> set in the kernel.</p>
